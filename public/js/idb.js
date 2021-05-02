@@ -3,7 +3,7 @@ const request = indexedDB.open('budget', 1);
 
 request.onupgradeneeded = function(event) {
   const db = event.target.result;
-  db.createObjectStore('new_budget', { autoIncrement: true });
+  db.createObjectStore('new_transaction', { autoIncrement: true });
 };
 
 request.onsuccess = function(event) {
@@ -12,7 +12,7 @@ request.onsuccess = function(event) {
 
   // check if app is online, if yes run checkDatabase() function to send all local db data to api
   if (navigator.onLine) {
-    uploadBudget();
+    uploadTransaction();
   }
 };
 
@@ -22,32 +22,32 @@ request.onerror = function(event) {
 };
 
 function saveRecord(record) {
-  const transaction = db.transaction(['new_budget'], 'readwrite');
+  const transaction = db.transaction(['new_transaction'], 'readwrite');
 
-  const budgetObjectStore = transaction.objectStore('new_budget');
+  const transactionObjectStore = transaction.objectStore('new_transaction');
 
   // add record to your store with add method.
-  budgetObjectStore.add(record);
+  transactionObjectStore.add(record);
 }
 
-function uploadBudget() {
+function uploadTransaction() {
   // open a transaction on your pending db
-  const transaction = db.transaction(['new_budget'], 'readwrite');
+  const transaction = db.transaction(['new_transaction'], 'readwrite');
 
   // access your pending object store
-  const budgetObjectStore = transaction.objectStore('new_budget');
+  const transactionObjectStore = transaction.objectStore('new_transaction');
 
   // get all records from store and set to a variable
-  const getAll = budgetObjectStore.getAll();
+  const getAll = transactionObjectStore.getAll();
 
   getAll.onsuccess = function() {
     // if there was data in indexedDb's store, let's send it to the api server
     if (getAll.result.length > 0) {
-      fetch('/api/transaction', {
+      fetch('/api/transaction/bulk', {
         method: 'POST',
         body: JSON.stringify(getAll.result),
         headers: {
-          Accept: 'application/json',
+          Accept: 'application/json, text/plain',
           'Content-Type': 'application/json'
         }
       })
@@ -57,10 +57,13 @@ function uploadBudget() {
             throw new Error(serverResponse);
           }
 
-          const transaction = db.transaction(['new_budget'], 'readwrite');
-          const budgetObjectStore = transaction.objectStore('new_budget');
+          const transaction = db.transaction(['new_transaction'], 'readwrite');
+          const transactionObjectStore = transaction.objectStore('new_transaction');
           // clear all items in your store
-          budgetObjectStore.clear();
+          transactionObjectStore.clear();
+
+          alert("All saved budget data has been submitted!");
+
         })
         .catch(err => {
           // set reference to redirect back here
@@ -71,4 +74,4 @@ function uploadBudget() {
 }
 
 // listen for app coming back online
-window.addEventListener('online', uploadBudget);
+window.addEventListener('online', uploadTransaction);
